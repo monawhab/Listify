@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.ksp)
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
+    id("androidx.navigation.safeargs.kotlin")
 }
 android {
     namespace = "com.listify"
