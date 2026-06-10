@@ -5,11 +5,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import coil.transform.RoundedCornersTransformation
 import com.listify.R
@@ -25,24 +28,38 @@ class ProductDetailFragment : Fragment() {
     private var _binding: FragmentProductDetailBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ProductDetailViewModel by viewModels()
+    private lateinit var relatedAdapter: RelatedProductAdapter
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentProductDetailBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupRelatedProducts()
         setupQuantityControls()
+        setupAddToCart()
         observeState()
+    }
+
+    private fun setupRelatedProducts() {
+        relatedAdapter = RelatedProductAdapter { product ->
+            // Navigate to the tapped related product's detail screen
+            val action = ProductDetailFragmentDirections
+                .actionProductDetailFragmentSelf(product.id)
+            findNavController().navigate(action)
+        }
+        binding.recyclerRelated.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.recyclerRelated.adapter = relatedAdapter
     }
 
     private fun setupQuantityControls() {
         binding.btnIncrement.setOnClickListener { viewModel.incrementQuantity() }
         binding.btnDecrement.setOnClickListener { viewModel.decrementQuantity() }
-        binding.btnAddToCart.setOnClickListener {
-            Toast.makeText(requireContext(), "Added ${viewModel.quantity.value} item(s) to cart!", Toast.LENGTH_SHORT).show()
-        }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.quantity.collect { binding.tvQuantity.text = it.toString() }
@@ -50,14 +67,36 @@ class ProductDetailFragment : Fragment() {
         }
     }
 
+    private fun setupAddToCart() {
+        binding.btnAddToCart.setOnClickListener {
+            viewModel.addToCart()
+            Toast.makeText(
+                requireContext(),
+                "Added ${viewModel.quantity.value} item(s) to cart!",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     private fun observeState() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    when (state) {
-                        is UiState.Loading -> { /* skeleton future */ }
-                        is UiState.Success -> bindProduct(state.data)
-                        is UiState.Error   -> Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                launch {
+                    viewModel.uiState.collect { state ->
+                        when (state) {
+                            is UiState.Loading -> Unit
+                            is UiState.Success -> bindProduct(state.data)
+                            is UiState.Error ->
+                                Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+                launch {
+                    viewModel.relatedProducts.collect { related ->
+                        relatedAdapter.submitList(related)
+                        val hasRelated = related.isNotEmpty()
+                        binding.tvRelatedTitle.isVisible = hasRelated
+                        binding.recyclerRelated.isVisible = hasRelated
                     }
                 }
             }
@@ -79,5 +118,8 @@ class ProductDetailFragment : Fragment() {
         }
     }
 
-    override fun onDestroyView() { super.onDestroyView(); _binding = null }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 }
