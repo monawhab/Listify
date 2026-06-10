@@ -26,7 +26,7 @@ android {
             val storePassword = System.getenv("STORE_PASSWORD")
 
             if (keystoreFile != null && keyAlias != null) {
-                storeFile = file("${rootProject.projectDir}/listify.jks")
+                storeFile = file("${rootProject.projectDir}/listify_listify@2024.jks")
                 this.storePassword = storePassword
                 this.keyAlias = keyAlias
                 this.keyPassword = keyPassword
