@@ -6,6 +6,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
+import coil.transform.RoundedCornersTransformation
 import com.listify.R
 import com.listify.databinding.ItemProductCardBinding
 import com.listify.domain.model.Product
@@ -21,9 +22,8 @@ class ProductAdapter(
         return ProductViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: ProductViewHolder, position: Int) =
         holder.bind(getItem(position))
-    }
 
     inner class ProductViewHolder(
         private val binding: ItemProductCardBinding
@@ -31,15 +31,19 @@ class ProductAdapter(
 
         fun bind(product: Product) {
             binding.apply {
+                tvCategory.text = product.category
                 tvProductName.text = product.title
                 tvProductPrice.text = root.context.getString(R.string.price_format, product.price)
                 ratingBar.rating = product.rating.rate.toFloat()
                 tvRatingCount.text = "(${product.rating.count})"
+
                 ivProductImage.load(product.imageUrl) {
                     placeholder(R.drawable.ic_image_placeholder)
                     error(R.drawable.ic_image_placeholder)
-                    crossfade(true)
+                    crossfade(300)
+                    transformations(RoundedCornersTransformation(8f))
                 }
+
                 root.setOnClickListener { onProductClick(product) }
             }
         }

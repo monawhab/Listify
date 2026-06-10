@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="6dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="3dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <!-- Image skeleton -->
+        <View
+            android:id="@+id/skeletonImage"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:background="@drawable/skeleton_shape" />
+
+        <!-- Category skeleton -->
+        <View
+            android:layout_width="60dp"
+            android:layout_height="10dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/skeleton_shape" />
+
+        <!-- Title skeleton line 1 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/skeleton_shape" />
+
+        <!-- Title skeleton line 2 -->
+        <View
+            android:layout_width="100dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/skeleton_shape" />
+
+        <!-- Price skeleton -->
+        <View
+            android:layout_width="70dp"
+            android:layout_height="14dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/skeleton_shape" />
+
+        <!-- Rating skeleton -->
+        <View
+            android:layout_width="90dp"
+            android:layout_height="10dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/skeleton_shape" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
