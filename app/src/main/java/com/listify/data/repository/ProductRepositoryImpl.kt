@@ -10,16 +10,16 @@ class ProductRepositoryImpl @Inject constructor(
     private val api: FakeStoreApi
 ) : ProductRepository {
 
-    override suspend fun getProducts(): Result<List<Product>> = runCatching {
-        api.getProducts().map { it.toDomain() }
+    override suspend fun getProducts(limit: Int): Result<List<Product>> = runCatching {
+        api.getProducts(limit = limit).map { it.toDomain() }
     }
 
     override suspend fun getProductById(id: Int): Result<Product> = runCatching {
         api.getProductById(id).toDomain()
     }
 
-    override suspend fun getProductsByCategory(category: String): Result<List<Product>> = runCatching {
-        api.getProductsByCategory(category).map { it.toDomain() }
+    override suspend fun getProductsByCategory(category: String, limit: Int): Result<List<Product>> = runCatching {
+        api.getProductsByCategory(category, limit).map { it.toDomain() }
     }
 
     override suspend fun getCategories(): Result<List<String>> = runCatching {

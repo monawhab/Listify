@@ -8,6 +8,7 @@ import com.listify.domain.usecase.GetProductsByCategoryUseCase
 import com.listify.domain.usecase.GetProductsUseCase
 import com.listify.presentation.common.UiState
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,8 +18,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -30,7 +30,6 @@ class ProductListViewModelTest {
     val instantTaskExecutorRule = InstantTaskExecutorRule()
 
     private val testDispatcher = StandardTestDispatcher()
-
     private lateinit var viewModel: ProductListViewModel
     private val getProductsUseCase: GetProductsUseCase = mockk()
     private val getProductsByCategoryUseCase: GetProductsByCategoryUseCase = mockk()
@@ -45,25 +44,13 @@ class ProductListViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        coEvery { getProductsUseCase() } returns Result.success(fakeProducts)
+        coEvery { getProductsUseCase(any()) } returns Result.success(fakeProducts)
         coEvery { getCategoriesUseCase() } returns Result.success(listOf("clothing", "electronics"))
         viewModel = ProductListViewModel(getProductsUseCase, getProductsByCategoryUseCase, getCategoriesUseCase)
     }
 
     @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
-
-    @Test
-    fun `initial state is Loading`() = runTest {
-        // State starts as Loading before init block runs
-        val initialVm = ProductListViewModel(getProductsUseCase, getProductsByCategoryUseCase, getCategoriesUseCase)
-        // After advancing we should get Success
-        testDispatcher.scheduler.advanceUntilIdle()
-        val state = initialVm.uiState.first()
-        assertTrue(state is UiState.Success)
-    }
+    fun tearDown() { Dispatchers.resetMain() }
 
     @Test
     fun `loadProducts emits Success with all products`() = runTest {
@@ -75,8 +62,8 @@ class ProductListViewModelTest {
 
     @Test
     fun `loadProducts emits Error on failure`() = runTest {
-        coEvery { getProductsUseCase() } returns Result.failure(RuntimeException("Network error"))
-        viewModel.loadProducts()
+        coEvery { getProductsUseCase(any()) } returns Result.failure(RuntimeException("Network error"))
+        viewModel.loadProducts(reset = true)
         testDispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.first()
         assertTrue(state is UiState.Error)
@@ -87,19 +74,16 @@ class ProductListViewModelTest {
     fun `search filters products by title`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.updateSearchQuery("Laptop")
-        val state = viewModel.uiState.first()
-        assertTrue(state is UiState.Success)
-        val products = (state as UiState.Success).data
-        assertEquals(1, products.size)
-        assertEquals("Laptop", products[0].title)
+        val state = viewModel.uiState.first() as UiState.Success
+        assertEquals(1, state.data.size)
+        assertEquals("Laptop", state.data[0].title)
     }
 
     @Test
     fun `sort by price ascending orders correctly`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.updateSortOrder(SortOrder.PRICE_ASC)
-        val state = viewModel.uiState.first() as UiState.Success
-        val prices = state.data.map { it.price }
+        val prices = (viewModel.uiState.first() as UiState.Success).data.map { it.price }
         assertEquals(prices, prices.sorted())
     }
 
@@ -109,5 +93,35 @@ class ProductListViewModelTest {
         viewModel.updateCategory("electronics")
         val state = viewModel.uiState.first() as UiState.Success
         assertTrue(state.data.all { it.category == "electronics" })
+    }
+
+    @Test
+    fun `loadNextPage does nothing when already loading`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        // Simulate already loading
+        viewModel.loadNextPage()
+        viewModel.loadNextPage() // second call should be ignored
+        testDispatcher.scheduler.advanceUntilIdle()
+        // getProductsUseCase called once on init + once for loadNextPage = 2 max
+        coVerify(atMost = 2) { getProductsUseCase(any()) }
+    }
+
+    @Test
+    fun `loadNextPage increments limit by PAGE_SIZE`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        val initialLimit = viewModel.pagingState.value.currentLimit
+        viewModel.loadNextPage()
+        testDispatcher.scheduler.advanceUntilIdle()
+        val newLimit = viewModel.pagingState.value.currentLimit
+        assertTrue(newLimit > initialLimit)
+    }
+
+    @Test
+    fun `hasReachedEnd is true when fewer products than limit returned`() = runTest {
+        // Return 3 items when limit is 10 — means end of data
+        coEvery { getProductsUseCase(any()) } returns Result.success(fakeProducts)
+        viewModel.loadProducts(reset = true)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.pagingState.value.hasReachedEnd)
     }
 }
