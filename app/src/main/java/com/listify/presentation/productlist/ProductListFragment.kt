@@ -14,7 +14,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.listify.R
 import com.listify.databinding.FragmentProductListBinding
 import com.listify.presentation.common.UiState
 import dagger.hilt.android.AndroidEntryPoint
@@ -29,9 +28,7 @@ class ProductListFragment : Fragment() {
     private lateinit var productAdapter: ProductAdapter
     private lateinit var skeletonAdapter: SkeletonAdapter
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProductListBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -72,8 +69,7 @@ class ProductListFragment : Fragment() {
     }
 
     private fun setupRetry() {
-        binding.layoutError.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRetry)
-            ?.setOnClickListener { viewModel.loadProducts(reset = true) }
+        binding.btnRetry.setOnClickListener { viewModel.loadProducts(reset = true) }
     }
 
     private fun setupPagination() {
@@ -105,18 +101,13 @@ class ProductListFragment : Fragment() {
                                 } else {
                                     if (binding.recyclerView.adapter != productAdapter)
                                         binding.recyclerView.adapter = productAdapter
-                                    productAdapter.submitProducts(
-                                        state.data,
-                                        viewModel.pagingState.value.isLoadingMore
-                                    )
+                                    productAdapter.submitProducts(state.data, viewModel.pagingState.value.isLoadingMore)
                                     binding.recyclerView.isVisible = true
                                 }
                             }
                             is UiState.Error -> {
                                 binding.layoutError.isVisible = true
-                                binding.layoutError
-                                    .findViewById<android.widget.TextView>(R.id.tvErrorMessage)
-                                    ?.text = state.message
+                                binding.tvErrorMessage.text = state.message
                             }
                         }
                     }
