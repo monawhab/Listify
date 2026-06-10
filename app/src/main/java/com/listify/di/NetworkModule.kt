@@ -5,10 +5,13 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.net.Inet4Address
+import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -20,7 +23,7 @@ object NetworkModule {
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor =
         HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.BASIC
         }
 
     @Provides
@@ -31,6 +34,12 @@ object NetworkModule {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            // Force IPv4 — emulator IPv6 connectivity is unreliable
+            .dns { hostname ->
+                val addresses = Dns.SYSTEM.lookup(hostname)
+                val ipv4 = addresses.filterIsInstance<Inet4Address>()
+                ipv4.ifEmpty { addresses }
+            }
             .build()
 
     @Provides
