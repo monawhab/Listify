@@ -48,7 +48,7 @@ jobs:
       - name: Decode Keystore
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/listify.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/listify_listify@2024.jks
 
       - name: Sign APK
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
