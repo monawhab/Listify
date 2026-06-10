@@ -28,13 +28,20 @@ jobs:
       - name: Run Lint
         run: ./gradlew lint
 
-      - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest
+      - name: Run Unit Tests with Coverage
+        run: ./gradlew testDebugUnitTest jacocoTestReport
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ github.sha }}
+          path: app/build/reports/jacoco/
+          retention-days: 14
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: listify-debug-${{ github.sha }}
@@ -58,5 +65,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '✅ **Listify CI passed** — Build, lint, and unit tests all green. APK artifact uploaded.'
+              body: '✅ **Listify CI passed** — Lint clean, all unit tests green, APK + coverage report uploaded.'
             })
