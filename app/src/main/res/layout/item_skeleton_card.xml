@@ -14,49 +14,36 @@
         android:orientation="vertical"
         android:padding="10dp">
 
-        <!-- Image skeleton -->
-        <View
-            android:id="@+id/skeletonImage"
+        <com.listify.presentation.productlist.ShimmerView
             android:layout_width="match_parent"
             android:layout_height="150dp"
-            android:background="@drawable/skeleton_shape" />
+            android:background="@drawable/skeleton_shape"/>
 
-        <!-- Category skeleton -->
-        <View
+        <com.listify.presentation.productlist.ShimmerView
             android:layout_width="60dp"
             android:layout_height="10dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/skeleton_shape" />
+            android:layout_marginTop="10dp"/>
 
-        <!-- Title skeleton line 1 -->
-        <View
+        <com.listify.presentation.productlist.ShimmerView
             android:layout_width="match_parent"
             android:layout_height="12dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/skeleton_shape" />
+            android:layout_marginTop="8dp"/>
 
-        <!-- Title skeleton line 2 -->
-        <View
+        <com.listify.presentation.productlist.ShimmerView
             android:layout_width="100dp"
             android:layout_height="12dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/skeleton_shape" />
+            android:layout_marginTop="4dp"/>
 
-        <!-- Price skeleton -->
-        <View
+        <com.listify.presentation.productlist.ShimmerView
             android:layout_width="70dp"
             android:layout_height="14dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/skeleton_shape" />
+            android:layout_marginTop="8dp"/>
 
-        <!-- Rating skeleton -->
-        <View
+        <com.listify.presentation.productlist.ShimmerView
             android:layout_width="90dp"
             android:layout_height="10dp"
             android:layout_marginTop="6dp"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/skeleton_shape" />
-
+            android:layout_marginBottom="4dp"/>
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
