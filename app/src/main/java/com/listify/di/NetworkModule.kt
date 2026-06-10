@@ -15,44 +15,41 @@ import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
+/** Prefer IPv4 addresses — Android emulator has unreliable IPv6 tunnelling */
+object IPv4PreferDns : Dns {
+    override fun lookup(hostname: String): List<InetAddress> {
+        val all = Dns.SYSTEM.lookup(hostname)
+        val v4 = all.filterIsInstance<Inet4Address>()
+        return v4.ifEmpty { all }
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    @Provides
-    @Singleton
+    @Provides @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor =
-        HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
-        }
+        HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
 
-    @Provides
-    @Singleton
-    fun provideOkHttpClient(loggingInterceptor: HttpLoggingInterceptor): OkHttpClient =
+    @Provides @Singleton
+    fun provideOkHttpClient(logging: HttpLoggingInterceptor): OkHttpClient =
         OkHttpClient.Builder()
-            .addInterceptor(loggingInterceptor)
+            .addInterceptor(logging)
+            .dns(IPv4PreferDns)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            // Force IPv4 — emulator IPv6 connectivity is unreliable
-            .dns { hostname ->
-                val addresses = Dns.SYSTEM.lookup(hostname)
-                val ipv4 = addresses.filterIsInstance<Inet4Address>()
-                ipv4.ifEmpty { addresses }
-            }
             .build()
 
-    @Provides
-    @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit =
+    @Provides @Singleton
+    fun provideRetrofit(client: OkHttpClient): Retrofit =
         Retrofit.Builder()
             .baseUrl(FakeStoreApi.BASE_URL)
-            .client(okHttpClient)
+            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
-    @Provides
-    @Singleton
+    @Provides @Singleton
     fun provideFakeStoreApi(retrofit: Retrofit): FakeStoreApi =
         retrofit.create(FakeStoreApi::class.java)
 }
