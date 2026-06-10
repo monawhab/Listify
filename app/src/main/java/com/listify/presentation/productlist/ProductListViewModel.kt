@@ -2,6 +2,7 @@ package com.listify.presentation.productlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.listify.data.remote.api.FakeStoreApi
 import com.listify.domain.model.Product
 import com.listify.domain.usecase.GetCategoriesUseCase
 import com.listify.domain.usecase.GetProductsByCategoryUseCase
@@ -24,6 +25,12 @@ data class FilterState(
     val searchQuery: String = ""
 )
 
+data class PagingState(
+    val currentLimit: Int = FakeStoreApi.PAGE_SIZE,
+    val isLoadingMore: Boolean = false,
+    val hasReachedEnd: Boolean = false
+)
+
 @HiltViewModel
 class ProductListViewModel @Inject constructor(
     private val getProductsUseCase: GetProductsUseCase,
@@ -40,6 +47,9 @@ class ProductListViewModel @Inject constructor(
     private val _filterState = MutableStateFlow(FilterState())
     val filterState: StateFlow<FilterState> = _filterState.asStateFlow()
 
+    private val _pagingState = MutableStateFlow(PagingState())
+    val pagingState: StateFlow<PagingState> = _pagingState.asStateFlow()
+
     private var allProducts: List<Product> = emptyList()
 
     init {
@@ -47,17 +57,40 @@ class ProductListViewModel @Inject constructor(
         loadCategories()
     }
 
-    fun loadProducts() {
+    fun loadProducts(reset: Boolean = true) {
         viewModelScope.launch {
-            _uiState.value = UiState.Loading
-            getProductsUseCase()
+            if (reset) {
+                _pagingState.value = PagingState()
+                _uiState.value = UiState.Loading
+            }
+            val limit = _pagingState.value.currentLimit
+            getProductsUseCase(limit)
                 .onSuccess { products ->
                     allProducts = products
+                    // FakeStore has 20 total products — detect end of data
+                    val hasReachedEnd = products.size < limit || products.size >= 20
+                    _pagingState.value = _pagingState.value.copy(
+                        isLoadingMore = false,
+                        hasReachedEnd = hasReachedEnd
+                    )
                     applyFilters()
                 }
                 .onFailure { error ->
+                    _pagingState.value = _pagingState.value.copy(isLoadingMore = false)
                     _uiState.value = UiState.Error(error.message ?: "Unknown error")
                 }
+        }
+    }
+
+    fun loadNextPage() {
+        val paging = _pagingState.value
+        if (paging.isLoadingMore || paging.hasReachedEnd) return
+        if (_uiState.value !is UiState.Success) return
+
+        viewModelScope.launch {
+            val nextLimit = paging.currentLimit + FakeStoreApi.PAGE_SIZE
+            _pagingState.value = paging.copy(isLoadingMore = true, currentLimit = nextLimit)
+            loadProducts(reset = false)
         }
     }
 
@@ -85,30 +118,21 @@ class ProductListViewModel @Inject constructor(
         val filter = _filterState.value
         var filtered = allProducts
 
-        // Search
         if (filter.searchQuery.isNotBlank()) {
             filtered = filtered.filter {
                 it.title.contains(filter.searchQuery, ignoreCase = true) ||
                 it.category.contains(filter.searchQuery, ignoreCase = true)
             }
         }
-
-        // Category
         filter.selectedCategory?.let { cat ->
             filtered = filtered.filter { it.category == cat }
         }
-
-        // Price
         filter.maxPrice?.let { max ->
             filtered = filtered.filter { it.price <= max }
         }
-
-        // Rating
         filter.minRating?.let { min ->
             filtered = filtered.filter { it.rating.rate >= min }
         }
-
-        // Sort
         filtered = when (filter.sortOrder) {
             SortOrder.PRICE_ASC  -> filtered.sortedBy { it.price }
             SortOrder.PRICE_DESC -> filtered.sortedByDescending { it.price }
