@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.listify.domain.model.Product
+import com.listify.domain.repository.CartRepository
 import com.listify.domain.usecase.GetProductByIdUseCase
 import com.listify.domain.usecase.GetProductsByCategoryUseCase
 import com.listify.presentation.common.UiState
@@ -18,6 +19,7 @@ import javax.inject.Inject
 class ProductDetailViewModel @Inject constructor(
     private val getProductByIdUseCase: GetProductByIdUseCase,
     private val getProductsByCategoryUseCase: GetProductsByCategoryUseCase,
+    private val cartRepository: CartRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -32,9 +34,9 @@ class ProductDetailViewModel @Inject constructor(
     private val _quantity = MutableStateFlow(1)
     val quantity: StateFlow<Int> = _quantity.asStateFlow()
 
-    init {
-        loadProduct()
-    }
+    val cartItemCount: StateFlow<List<*>> = cartRepository.cartItems
+
+    init { loadProduct() }
 
     private fun loadProduct() {
         viewModelScope.launch {
@@ -44,9 +46,7 @@ class ProductDetailViewModel @Inject constructor(
                     _uiState.value = UiState.Success(product)
                     loadRelated(product.category, product.id)
                 }
-                .onFailure { error ->
-                    _uiState.value = UiState.Error(error.message ?: "Unknown error")
-                }
+                .onFailure { _uiState.value = UiState.Error(it.message ?: "Error") }
         }
     }
 
@@ -58,11 +58,11 @@ class ProductDetailViewModel @Inject constructor(
         }
     }
 
-    fun incrementQuantity() {
-        if (_quantity.value < 99) _quantity.value++
-    }
+    fun incrementQuantity() { if (_quantity.value < 99) _quantity.value++ }
+    fun decrementQuantity() { if (_quantity.value > 1) _quantity.value-- }
 
-    fun decrementQuantity() {
-        if (_quantity.value > 1) _quantity.value--
+    fun addToCart() {
+        val product = (_uiState.value as? UiState.Success)?.data ?: return
+        cartRepository.addToCart(product, _quantity.value)
     }
 }
