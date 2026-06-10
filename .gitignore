@@ -1,0 +1,19 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.jks
+*.keystore
+
+# Generated files
+app/build/
+**/build/
+
+# Gradle wrapper
+!gradle/wrapper/gradle-wrapper.jar

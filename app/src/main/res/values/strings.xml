@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Listify</string>
+    <string name="product_detail_label">Product Detail</string>
+    <string name="price_format">$%.2f</string>
+    <string name="retry">Retry</string>
+    <string name="no_products_found">No products found</string>
+    <string name="add_to_cart">Add to Cart</string>
+    <string name="related_products">Related Products</string>
+    <string name="search_products">Search products…</string>
+    <string name="error_loading">Failed to load products</string>
+</resources>

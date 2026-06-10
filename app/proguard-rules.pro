@@ -1,0 +1,5 @@
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class com.listify.data.remote.dto.** { *; }
+-keep class retrofit2.** { *; }
+-keepattributes Exceptions
