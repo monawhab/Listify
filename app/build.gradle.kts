@@ -6,11 +6,9 @@ plugins {
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
 }
-
 android {
     namespace = "com.listify"
     compileSdk = 34
-
     defaultConfig {
         applicationId = "com.listify"
         minSdk = 26
@@ -19,7 +17,6 @@ android {
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-
     signingConfigs {
         create("release") {
             val keyAlias = System.getenv("KEY_ALIAS")
@@ -33,7 +30,6 @@ android {
             }
         }
     }
-
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -45,26 +41,21 @@ android {
         }
         debug {
             isDebuggable = true
-            applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             // Disable Crashlytics in debug to avoid polluting production data
             manifestPlaceholders["crashlyticsEnabled"] = false
         }
     }
-
     buildFeatures {
         viewBinding = true
         buildConfig = true
     }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
     kotlinOptions { jvmTarget = "17" }
 }
-
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -82,12 +73,10 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil)
-
     // Firebase BOM — manages all Firebase library versions
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
-
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
