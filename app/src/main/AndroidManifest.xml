@@ -12,6 +12,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Listify">
 
+        <!-- Crashlytics: enabled in release, disabled in debug -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="${crashlyticsEnabled}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

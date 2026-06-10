@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -20,12 +22,10 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystoreFile = System.getenv("KEYSTORE_FILE")
             val keyAlias = System.getenv("KEY_ALIAS")
             val keyPassword = System.getenv("KEY_PASSWORD")
             val storePassword = System.getenv("STORE_PASSWORD")
-
-            if (keystoreFile != null && keyAlias != null) {
+            if (keyAlias != null) {
                 storeFile = file("${rootProject.projectDir}/listify_listify@2024.jks")
                 this.storePassword = storePassword
                 this.keyAlias = keyAlias
@@ -40,11 +40,15 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release")
+            // Enable Crashlytics in release
+            manifestPlaceholders["crashlyticsEnabled"] = true
         }
         debug {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            // Disable Crashlytics in debug to avoid polluting production data
+            manifestPlaceholders["crashlyticsEnabled"] = false
         }
     }
 
@@ -58,9 +62,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    kotlinOptions { jvmTarget = "17" }
 }
 
 dependencies {
@@ -81,6 +83,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil)
 
+    // Firebase BOM — manages all Firebase library versions
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
@@ -88,5 +95,3 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
-// Firebase Crashlytics — added by Phase 5 monitoring setup
-// (append at bottom, plugins block updated separately)
