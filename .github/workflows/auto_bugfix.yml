@@ -69,88 +69,10 @@ jobs:
           echo "Created Jira ticket: $TICKET"
 
       # ── Use Claude AI to analyze crash and generate fix ──────────────────────
-      - name: Analyze crash with Claude AI
+      - name: Analyze crash (Claude AI or static fallback)
         id: claude
         run: |
-          STACK_TRACE=$(cat /tmp/stack_trace.txt)
-          
-          # Get relevant source files to give Claude context
-          find app/src/main/java -name "*.kt" | head -20 | while read f; do
-            echo "=== $f ===" >> /tmp/codebase_context.txt
-            cat "$f" >> /tmp/codebase_context.txt
-          done
-          
-          # Call Claude API to analyze and generate fix
-          python3 << 'PYEOF'
-          import json, urllib.request, os
-
-          stack_trace = open("/tmp/stack_trace.txt").read()
-          try:
-              context = open("/tmp/codebase_context.txt").read()[:8000]  # limit context
-          except:
-              context = "No context available"
-
-          prompt = f"""You are an Android engineer analyzing a production crash in the Listify app.
-
-CRASH TITLE: {os.environ.get('CRASH_TITLE', 'Unknown crash')}
-
-STACK TRACE:
-{stack_trace}
-
-CODEBASE CONTEXT (relevant files):
-{context}
-
-Your task:
-1. Identify the root cause of the crash
-2. Identify the exact file and line that needs to be fixed
-3. Generate the complete fixed version of the affected file
-4. Write a clear commit message
-
-Respond in this exact JSON format:
-{{
-  "root_cause": "brief explanation",
-  "affected_file": "path/to/file.kt",
-  "fix_description": "what the fix does",
-  "commit_message": "fix: brief description",
-  "confidence": "high|medium|low",
-  "fixed_code": "complete fixed file content here"
-}}"""
-
-          payload = {
-              "model": "claude-sonnet-4-20250514",
-              "max_tokens": 4096,
-              "messages": [{"role": "user", "content": prompt}]
-          }
-
-          req = urllib.request.Request(
-              "https://api.anthropic.com/v1/messages",
-              data=json.dumps(payload).encode(),
-              headers={
-                  "Content-Type": "application/json",
-                  "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-                  "anthropic-version": "2023-06-01"
-              }
-          )
-
-          with urllib.request.urlopen(req) as resp:
-              data = json.loads(resp.read())
-              text = data["content"][0]["text"]
-              
-              # Parse JSON from response
-              import re
-              match = re.search(r'\{.*\}', text, re.DOTALL)
-              if match:
-                  result = json.loads(match.group())
-                  with open("/tmp/fix_result.json", "w") as f:
-                      json.dump(result, f)
-                  print(f"Root cause: {result.get('root_cause')}")
-                  print(f"Affected file: {result.get('affected_file')}")
-                  print(f"Confidence: {result.get('confidence')}")
-              else:
-                  print("Could not parse structured response")
-                  with open("/tmp/fix_result.json", "w") as f:
-                      json.dump({"root_cause": text, "confidence": "low"}, f)
-          PYEOF
+          python3 .github/scripts/crash_analyzer.py
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CRASH_TITLE: ${{ steps.crash.outputs.title }}

@@ -1,0 +1,96 @@
+name: Listify Staging — Deploy to Firebase
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ main ]        # every PR to main gets a staging build
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Staging release notes'
+        required: false
+        default: 'Staging build from develop branch'
+
+jobs:
+  staging-deploy:
+    name: Build & Deploy Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run Unit Tests
+        run: ./gradlew testStagingUnitTest
+
+      - name: Build Staging APK
+        run: ./gradlew assembleStagingRelease
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/listify_listify@2024.jks
+
+      - name: Upload Staging APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: listify-staging-${{ github.sha }}
+          path: app/build/outputs/apk/staging/*.apk
+          retention-days: 14
+
+      - name: Deploy to Firebase App Distribution (staging)
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID_STAGING }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          groups: staging-testers
+          file: app/build/outputs/apk/staging/app-staging-release.apk
+          releaseNotes: |
+            🧪 STAGING BUILD
+            ${{ github.event.inputs.release_notes || format('From {0} branch — commit {1}', github.ref_name, github.sha) }}
+
+      - name: Comment on PR with staging link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🧪 Staging Build Ready\n\nA staging APK has been deployed to Firebase App Distribution for review.\n\n- **Group:** staging-testers\n- **Commit:** \`${context.sha.substring(0,7)}\`\n\nInstall via Firebase App Distribution before merging to main.`
+            });
+
+      - name: Notify Slack — Staging deployed
+        if: success()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "🧪 *Listify staging build deployed*",
+              "attachments": [{
+                "color": "warning",
+                "fields": [
+                  { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
+                  { "title": "Triggered by", "value": "${{ github.actor }}", "short": true },
+                  { "title": "Commit", "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>", "short": false },
+                  { "title": "Firebase", "value": "Deployed to *staging-testers* group", "short": false }
+                ]
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
