@@ -40,16 +40,16 @@ jobs:
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
 
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/listify_listify@2024.jks
+
       - name: Build Release APK
         run: ./gradlew assembleRelease
         env:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-
-      - name: Decode and Sign Keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/listify_listify@2024.jks
 
       - name: Sign APK
         uses: r0adkll/sign-android-release@v1
