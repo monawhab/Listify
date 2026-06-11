@@ -1,26 +1,26 @@
 name: Listify Auto Bug-Fix Loop
 
 on:
-  # Triggered by Firebase Crashlytics webhook via repository_dispatch
   repository_dispatch:
     types: [crashlytics_alert]
-  # Or manually with a crash description
   workflow_dispatch:
     inputs:
       crash_title:
         description: 'Crash title / exception class'
         required: true
+        default: 'NullPointerException in ProductListFragment'
       crash_stack_trace:
-        description: 'Stack trace (paste full trace)'
+        description: 'Stack trace'
         required: true
+        default: 'java.lang.NullPointerException at com.listify.presentation.productlist.ProductListFragment.setupAdapters(ProductListFragment.kt:45)'
       affected_version:
         description: 'App version affected'
         required: false
-        default: 'latest'
+        default: '1.0.1'
 
 jobs:
   triage-and-fix:
-    name: Triage Crash & Generate Fix
+    name: Triage Crash and Generate Fix
     runs-on: ubuntu-latest
 
     steps:
@@ -30,172 +30,66 @@ jobs:
       - name: Extract crash details
         id: crash
         run: |
-          # From workflow_dispatch or repository_dispatch payload
           TITLE="${{ github.event.inputs.crash_title || github.event.client_payload.crash_title }}"
-          TRACE="${{ github.event.inputs.crash_stack_trace || github.event.client_payload.stack_trace }}"
           VERSION="${{ github.event.inputs.affected_version || github.event.client_payload.version }}"
           echo "title=$TITLE" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          # Write stack trace to file (handles multiline)
+          TRACE="${{ github.event.inputs.crash_stack_trace || github.event.client_payload.stack_trace }}"
           echo "$TRACE" > /tmp/stack_trace.txt
-          echo "Stack trace saved"
 
-      # ── Create Jira bug ticket automatically ─────────────────────────────────
       - name: Create Jira Bug Ticket
         id: jira
-        run: |
-          RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Basic ${{ secrets.JIRA_API_TOKEN_B64 }}" \
-            -H "Content-Type: application/json" \
-            "https://androiddevteam.atlassian.net/rest/api/3/issue" \
-            -d "{
-              \"fields\": {
-                \"project\": { \"key\": \"LIS\" },
-                \"summary\": \"[AUTO] Crash: ${{ steps.crash.outputs.title }}\",
-                \"description\": {
-                  \"type\": \"doc\", \"version\": 1,
-                  \"content\": [{
-                    \"type\": \"paragraph\",
-                    \"content\": [{\"type\": \"text\", \"text\": \"Auto-detected crash from Firebase Crashlytics.\\n\\nVersion: ${{ steps.crash.outputs.version }}\\n\\nStack Trace:\\n$(cat /tmp/stack_trace.txt)\"}]
-                  }]
-                },
-                \"issuetype\": { \"name\": \"Bug\" },
-                \"priority\": { \"name\": \"High\" },
-                \"labels\": [\"auto-detected\", \"crashlytics\"]
-              }
-            }")
-          TICKET=$(echo $RESPONSE | python3 -c "import sys,json; print(json.load(sys.stdin).get('key','UNKNOWN'))")
-          echo "ticket=$TICKET" >> $GITHUB_OUTPUT
-          echo "Created Jira ticket: $TICKET"
-
-      # ── Use Claude AI to analyze crash and generate fix ──────────────────────
-      - name: Analyze crash (Claude AI or static fallback)
+        run: python3 .github/scripts/create_jira_ticket.py
+        env:
+          JIRA_API_TOKEN_B64: ${{ secrets.JIRA_API_TOKEN_B64 }}
+          CRASH_TITLE: ${{ steps.crash.outputs.title }}
+          CRASH_VERSION: ${{ steps.crash.outputs.version }}
         continue-on-error: true
-        id: claude
-        run: |
-          python3 .github/scripts/crash_analyzer.py
+
+      - name: Analyze crash
+        run: python3 .github/scripts/crash_analyzer.py
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CRASH_TITLE: ${{ steps.crash.outputs.title }}
+        continue-on-error: true
 
-      # ── Apply fix and open PR ─────────────────────────────────────────────────
-      - name: Apply fix and open PR
-        run: |
-          python3 << 'PYEOF'
-          import json, subprocess, os
-
-          result = json.load(open("/tmp/fix_result.json"))
-          ticket = os.environ["JIRA_TICKET"]
-          confidence = result.get("confidence", "low")
-          affected_file = result.get("affected_file", "")
-          fixed_code = result.get("fixed_code", "")
-          commit_msg = result.get("commit_message", f"fix: auto-fix for {ticket}")
-          root_cause = result.get("root_cause", "")
-          fix_desc = result.get("fix_description", "")
-          token = os.environ["GITHUB_TOKEN"]
-
-          if confidence == "low" or not affected_file or not fixed_code:
-              print(f"Confidence too low ({confidence}) or no fix generated. Creating analysis-only PR.")
-              fixed_code = f"// TODO: Manual fix needed\n// Root cause: {root_cause}\n// File: {affected_file}"
-
-          # Create fix branch
-          branch = f"autofix/{ticket.lower()}-crash-fix"
-          subprocess.run(["git","config","user.email","autofix@listify.ai"])
-          subprocess.run(["git","config","user.name","Listify AutoFix Bot"])
-          subprocess.run(["git","checkout","-b", branch])
-
-          # Write the fix
-          if affected_file and os.path.exists(affected_file):
-              with open(affected_file, "w") as f:
-                  f.write(fixed_code)
-              subprocess.run(["git","add", affected_file])
-          else:
-              # Create a patch notes file if we can't identify the exact file
-              with open(f"docs/crash_analysis_{ticket}.md", "w") as f:
-                  f.write(f"# Crash Analysis: {ticket}\n\n## Root Cause\n{root_cause}\n\n## Suggested Fix\n{fix_desc}\n")
-              subprocess.run(["git","add","."])
-
-          subprocess.run(["git","commit","-m", f"{commit_msg}\n\nAuto-generated fix for {ticket}\nConfidence: {confidence}"])
-
-          # Push branch
-          repo_url = f"https://monawhab:{token}@github.com/WEAndroidDevTeam/Listify.git"
-          subprocess.run(["git","remote","set-url","origin", repo_url])
-          subprocess.run(["git","push","origin", branch])
-
-          # Open PR
-          pr_body = f"""## 🤖 Auto-Fix: {ticket}
-
-**Root Cause:** {root_cause}
-
-**Fix:** {fix_desc}
-
-**Confidence:** {confidence}
-
-**Affected File:** `{affected_file}`
-
----
-*This PR was automatically generated by the Listify Auto Bug-Fix pipeline.*
-*Please review carefully before merging, especially for low/medium confidence fixes.*
-
-Fixes {ticket}"""
-
-          pr_data = {
-              "title": f"[AutoFix] {ticket}: {os.environ.get('CRASH_TITLE','Crash fix')}",
-              "body": pr_body,
-              "head": branch,
-              "base": "main"
-          }
-
-          import urllib.request
-          req = urllib.request.Request(
-              "https://api.github.com/repos/WEAndroidDevTeam/Listify/pulls",
-              data=json.dumps(pr_data).encode(),
-              headers={
-                  "Authorization": f"token {token}",
-                  "Accept": "application/vnd.github+json",
-                  "Content-Type": "application/json"
-              }
-          )
-          with urllib.request.urlopen(req) as resp:
-              pr = json.loads(resp.read())
-              print(f"PR created: {pr.get('html_url')}")
-              with open("/tmp/pr_url.txt", "w") as f:
-                  f.write(pr.get("html_url", ""))
-          PYEOF
+      - name: Open fix PR
+        run: python3 .github/scripts/open_fix_pr.py
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JIRA_TICKET: ${{ steps.jira.outputs.ticket }}
           CRASH_TITLE: ${{ steps.crash.outputs.title }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
-      # ── Update Jira ticket with PR link ──────────────────────────────────────
       - name: Update Jira with PR link
         run: |
           PR_URL=$(cat /tmp/pr_url.txt 2>/dev/null || echo "PR creation failed")
           TICKET="${{ steps.jira.outputs.ticket }}"
-          curl -s -X POST \
-            -H "Authorization: Basic ${{ secrets.JIRA_API_TOKEN_B64 }}" \
-            -H "Content-Type: application/json" \
-            "https://androiddevteam.atlassian.net/rest/api/3/issue/$TICKET/comment" \
-            -d "{\"body\":{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"🤖 Auto-fix PR generated: $PR_URL\"}]}]}}"
-          echo "Jira updated"
+          if [ -n "$TICKET" ] && [ "$TICKET" != "LIS-AUTO" ]; then
+            curl -s -X POST \
+              -H "Authorization: Basic ${{ secrets.JIRA_API_TOKEN_B64 }}" \
+              -H "Content-Type: application/json" \
+              "https://androiddevteam.atlassian.net/rest/api/3/issue/$TICKET/comment" \
+              -d "{\"body\":{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Auto-fix PR: $PR_URL\"}]}]}}"
+          fi
+        continue-on-error: true
 
-      # ── Slack notification ────────────────────────────────────────────────────
       - name: Notify Slack
         if: always()
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
             {
-              "text": "🤖 *Auto Bug-Fix triggered for ${{ steps.crash.outputs.title }}*",
+              "text": "Auto Bug-Fix triggered for ${{ steps.crash.outputs.title }}",
               "attachments": [{
                 "color": "warning",
                 "fields": [
-                  { "title": "Jira Ticket", "value": "<https://androiddevteam.atlassian.net/browse/${{ steps.jira.outputs.ticket }}|${{ steps.jira.outputs.ticket }}>", "short": true },
-                  { "title": "Version", "value": "${{ steps.crash.outputs.version }}", "short": true },
-                  { "title": "Status", "value": "Auto-fix PR opened — awaiting review", "short": false }
+                  { "title": "Ticket", "value": "${{ steps.jira.outputs.ticket }}", "short": true },
+                  { "title": "Version", "value": "${{ steps.crash.outputs.version }}", "short": true }
                 ]
               }]
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        continue-on-error: true
