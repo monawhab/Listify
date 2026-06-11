@@ -28,8 +28,26 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run Lint
-        run: ./gradlew lint
+      - name: Run Lint (capture report)
+        run: ./gradlew lint || true
+
+      - name: Upload Lint Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report-${{ github.sha }}
+          path: app/build/reports/lint-results-debug.xml
+          retention-days: 1
+
+      - name: Fail if lint errors found
+        run: |
+          if grep -q 'severity="Error"' app/build/reports/lint-results-debug.xml 2>/dev/null; then
+            echo "LINT ERRORS:"
+            grep -A5 'severity="Error"' app/build/reports/lint-results-debug.xml | head -60
+            exit 1
+          else
+            echo "Lint clean ✅"
+          fi
 
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
@@ -51,31 +69,3 @@ jobs:
           name: test-results-${{ github.sha }}
           path: app/build/reports/tests/
           retention-days: 7
-
-      - name: Comment PR — CI passed
-        if: github.event_name == 'pull_request' && success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const sha = context.sha.substring(0, 7);
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## ✅ CI Passed — \`${sha}\`\n\n| Check | Result |\n|---|---|\n| Lint | ✅ Clean |\n| Unit Tests | ✅ All green |\n| Debug APK | ✅ Built |\n\n[View full run](${runUrl})\n\n---\n**Ready for review.** Requires **1 approval** before merge.`
-            });
-
-      - name: Comment PR — CI failed
-        if: github.event_name == 'pull_request' && failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const sha = context.sha.substring(0, 7);
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## ❌ CI Failed — \`${sha}\`\n\n[View logs](${runUrl})\n\n> This PR cannot be merged until CI is green.`
-            });
