@@ -52,14 +52,10 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
 
       - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_apk
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          jarsigner -verbose             -sigalg SHA256withRSA             -digestalg SHA-256             -keystore ${{ github.workspace }}/listify_listify@2024.jks             -storepass "${{ secrets.STORE_PASSWORD }}"             -keypass "${{ secrets.KEY_PASSWORD }}"             app/build/outputs/apk/release/app-release-unsigned.apk             "${{ secrets.KEY_ALIAS }}"
+          
+          $ANDROID_HOME/build-tools/*/zipalign -v -p 4             app/build/outputs/apk/release/app-release-unsigned.apk             app/build/outputs/apk/release/app-release.apk ||           cp app/build/outputs/apk/release/app-release-unsigned.apk             app/build/outputs/apk/release/app-release.apk
 
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
