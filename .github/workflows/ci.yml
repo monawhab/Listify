@@ -26,34 +26,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Lint
-        run: ./gradlew lint 2>&1
-        continue-on-error: true
-        id: lint
-
-      - name: Upload Lint Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-report-${{ github.sha }}
-          path: |
-            app/build/reports/lint-results*.html
-            app/build/reports/lint-results*.xml
-          retention-days: 3
-
-      - name: Show Lint Errors
-        if: always()
-        run: |
-          echo "=== LINT XML REPORT ==="
-          find app/build/reports -name "*.xml" -exec grep -l "severity=\"Error\"" {} \; 2>/dev/null | while read f; do
-            echo "--- $f ---"
-            grep -A3 'severity="Error"' "$f" | head -60
-          done || echo "No XML report found"
-          
-          echo "=== LINT OUTCOME ==="
-          if [ "${{ steps.lint.outcome }}" = "failure" ]; then
-            echo "LINT FAILED — see report above"
-            exit 1
-          fi
+        run: ./gradlew lint
 
       - name: Run Unit Tests with Coverage
         run: ./gradlew testDebugUnitTest
@@ -87,7 +60,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ✅ CI Passed — \`${sha}\`\n\n| Check | Result |\n|---|---|\n| Lint | ✅ Clean |\n| Unit Tests | ✅ All green |\n| Debug APK | ✅ Built |\n\n[View full run](${runUrl})\n\n---\n**Ready for review.** This PR requires **1 approval** before it can be merged.`
+              body: `## ✅ CI Passed — \`${sha}\`\n\n| Check | Result |\n|---|---|\n| Lint | ✅ Clean |\n| Unit Tests | ✅ All green |\n| Debug APK | ✅ Built |\n\n[View full run](${runUrl})\n\n---\n**Ready for review.** Requires **1 approval** before merge.`
             });
 
       - name: Comment PR — CI failed
@@ -101,5 +74,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ❌ CI Failed — \`${sha}\`\n\nOne or more checks failed. [View logs](${runUrl}) to diagnose.\n\n> This PR cannot be merged until CI is green.`
+              body: `## ❌ CI Failed — \`${sha}\`\n\n[View logs](${runUrl})\n\n> This PR cannot be merged until CI is green.`
             });
