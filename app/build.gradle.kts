@@ -76,6 +76,16 @@ android {
         xmlReport = true
         disable += setOf("GradleDependency", "NewerVersionAvailable")
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+            all {
+                it.jvmArgs("-noverify", "-ea")
+            }
+        }
+    }
     buildFeatures {
         viewBinding = true
         buildConfig = true
