@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "330279669122",
+    "project_id": "listify-staging",
+    "storage_bucket": "listify-staging.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:330279669122:android:a29e3348bb74cac0e1d39b",
+        "android_client_info": {
+          "package_name": "com.listify.staging"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlkF0StVw-0Y7bqPQ3rIuUEWSg7kJvrBg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
