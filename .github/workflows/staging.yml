@@ -4,7 +4,7 @@ on:
   push:
     branches: [ develop ]
   pull_request:
-    branches: [ main ]        # every PR to main gets a staging build
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       release_notes:
@@ -28,11 +28,14 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Run Unit Tests
-        run: ./gradlew testStagingUnitTest
+        run: ./gradlew testDebugUnitTest
 
       - name: Build Staging APK
         run: ./gradlew assembleStagingRelease
@@ -44,7 +47,7 @@ jobs:
       - name: Decode Keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/listify_listify@2024.jks
 
-      - name: Upload Staging APK artifact
+      - name: Upload Staging APK
         uses: actions/upload-artifact@v4
         with:
           name: listify-staging-${{ github.sha }}
@@ -59,8 +62,7 @@ jobs:
           groups: staging-testers
           file: app/build/outputs/apk/staging/app-staging-release.apk
           releaseNotes: |
-            🧪 STAGING BUILD
-            ${{ github.event.inputs.release_notes || format('From {0} branch — commit {1}', github.ref_name, github.sha) }}
+            STAGING BUILD — ${{ github.event.inputs.release_notes || format('From {0} commit {1}', github.ref_name, github.sha) }}
 
       - name: Comment on PR with staging link
         if: github.event_name == 'pull_request'
@@ -71,23 +73,21 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🧪 Staging Build Ready\n\nA staging APK has been deployed to Firebase App Distribution for review.\n\n- **Group:** staging-testers\n- **Commit:** \`${context.sha.substring(0,7)}\`\n\nInstall via Firebase App Distribution before merging to main.`
+              body: `## 🧪 Staging Build Ready\nDeployed to Firebase App Distribution — *staging-testers* group.\nCommit: \`${context.sha.substring(0,7)}\``
             });
 
-      - name: Notify Slack — Staging deployed
-        if: success()
+      - name: Notify Slack
+        if: always()
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
             {
-              "text": "🧪 *Listify staging build deployed*",
+              "text": "🧪 *Listify staging — ${{ job.status }}*",
               "attachments": [{
-                "color": "warning",
+                "color": "${{ job.status == 'success' && 'warning' || 'danger' }}",
                 "fields": [
                   { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
-                  { "title": "Triggered by", "value": "${{ github.actor }}", "short": true },
-                  { "title": "Commit", "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>", "short": false },
-                  { "title": "Firebase", "value": "Deployed to *staging-testers* group", "short": false }
+                  { "title": "Triggered by", "value": "${{ github.actor }}", "short": true }
                 ]
               }]
             }

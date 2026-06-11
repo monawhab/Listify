@@ -70,6 +70,7 @@ jobs:
 
       # ── Use Claude AI to analyze crash and generate fix ──────────────────────
       - name: Analyze crash (Claude AI or static fallback)
+        continue-on-error: true
         id: claude
         run: |
           python3 .github/scripts/crash_analyzer.py
