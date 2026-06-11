@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
         android:background="@drawable/search_bg"
-        app:queryHint="Search products…"
+        app:queryHint="@string/search_products"
         app:iconifiedByDefault="false"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -47,13 +47,13 @@
             android:layout_width="96dp"
             android:layout_height="96dp"
             android:src="@drawable/ic_empty_box"
-            android:contentDescription="No products"/>
+            android:contentDescription="@string/cd_empty_image"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="No products found"
+            android:text="@string/no_products_found"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#1A1A1A"/>
@@ -62,7 +62,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Try adjusting your search or filters"
+            android:text="@string/no_products_subtitle"
             android:textSize="14sp"
             android:textColor="#888888"/>
     </LinearLayout>
@@ -84,13 +84,13 @@
             android:layout_width="96dp"
             android:layout_height="96dp"
             android:src="@drawable/ic_error"
-            android:contentDescription="Error"/>
+            android:contentDescription="@string/cd_error_image"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Something went wrong"
+            android:text="@string/error_loading"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#1A1A1A"/>
@@ -109,7 +109,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Try Again"
+            android:text="@string/try_again"
             app:cornerRadius="24dp"/>
 
     </LinearLayout>

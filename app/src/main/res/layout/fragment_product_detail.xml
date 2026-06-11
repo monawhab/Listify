@@ -103,7 +103,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Description"
+                        android:text="@string/label_description"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:textColor="#1A1A1A"/>
@@ -128,7 +128,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="8dp"
-                android:text="Related Products"
+                android:text="@string/related_products"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="#1A1A1A"
@@ -163,7 +163,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Quantity"
+                        android:text="@string/label_quantity"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:textColor="#1A1A1A"/>
@@ -180,7 +180,7 @@
                             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                             android:layout_width="44dp"
                             android:layout_height="44dp"
-                            android:text="−"
+                            android:text="@string/btn_decrement"
                             android:padding="0dp"
                             android:textSize="22sp"
                             app:cornerRadius="22dp"/>
@@ -200,7 +200,7 @@
                             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                             android:layout_width="44dp"
                             android:layout_height="44dp"
-                            android:text="+"
+                            android:text="@string/btn_increment"
                             android:padding="0dp"
                             android:textSize="22sp"
                             app:cornerRadius="22dp"/>
@@ -212,7 +212,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
                         android:layout_marginTop="16dp"
-                        android:text="Add to Cart"
+                        android:text="@string/add_to_cart"
                         android:textSize="16sp"
                         app:cornerRadius="28dp"/>
 

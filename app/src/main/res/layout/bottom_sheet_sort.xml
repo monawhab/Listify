@@ -4,18 +4,18 @@
     android:orientation="vertical" android:padding="20dp">
 
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="Sort By" android:textSize="18sp" android:textStyle="bold"
+        android:text="@string/sort_by" android:textSize="18sp" android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
 
     <RadioGroup android:id="@+id/radioGroupSort" android:layout_width="match_parent"
         android:layout_height="wrap_content">
         <RadioButton android:id="@+id/radioDefault" android:layout_width="match_parent"
-            android:layout_height="48dp" android:text="Default" android:textSize="15sp"/>
+            android:layout_height="48dp" android:text="@string/sort_default" android:textSize="15sp"/>
         <RadioButton android:id="@+id/radioPriceAsc" android:layout_width="match_parent"
-            android:layout_height="48dp" android:text="Price: Low to High" android:textSize="15sp"/>
+            android:layout_height="48dp" android:text="@string/sort_price_low_high" android:textSize="15sp"/>
         <RadioButton android:id="@+id/radioPriceDesc" android:layout_width="match_parent"
-            android:layout_height="48dp" android:text="Price: High to Low" android:textSize="15sp"/>
+            android:layout_height="48dp" android:text="@string/sort_price_high_low" android:textSize="15sp"/>
         <RadioButton android:id="@+id/radioTopRated" android:layout_width="match_parent"
-            android:layout_height="48dp" android:text="Top Rated" android:textSize="15sp"/>
+            android:layout_height="48dp" android:text="@string/sort_top_rated" android:textSize="15sp"/>
     </RadioGroup>
 </LinearLayout>

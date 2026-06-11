@@ -7,11 +7,11 @@
     android:padding="20dp">
 
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="Filter Products" android:textSize="18sp" android:textStyle="bold"
+        android:text="@string/filter_products" android:textSize="18sp" android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
 
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="Category" android:textSize="14sp" android:textStyle="bold"/>
+        android:text="@string/filter_category" android:textSize="14sp" android:textStyle="bold"/>
 
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroupCategory"
@@ -22,14 +22,14 @@
 
     <TextView android:id="@+id/tvPriceLabel" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_marginTop="16dp"
-        android:text="Max Price: Any" android:textSize="14sp" android:textStyle="bold"/>
+        android:text="@string/filter_max_price" android:textSize="14sp" android:textStyle="bold"/>
 
     <SeekBar android:id="@+id/seekBarPrice" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:layout_marginTop="8dp"/>
 
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" android:text="Min Rating" android:textSize="14sp"
-        android:textStyle="bold"/>
+        android:layout_marginTop="16dp" android:text="@string/filter_min_rating"
+        android:textSize="14sp" android:textStyle="bold"/>
 
     <RatingBar android:id="@+id/ratingBarFilter" android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:layout_marginTop="8dp"
@@ -43,12 +43,11 @@
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp" android:layout_height="wrap_content"
             android:layout_weight="1" android:layout_marginEnd="8dp"
-            android:text="Reset" app:cornerRadius="24dp"/>
+            android:text="@string/filter_reset" app:cornerRadius="24dp"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnApply"
             android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:text="Apply" app:cornerRadius="24dp"/>
-
+            android:layout_weight="1" android:text="@string/filter_apply" app:cornerRadius="24dp"/>
     </LinearLayout>
 </LinearLayout>

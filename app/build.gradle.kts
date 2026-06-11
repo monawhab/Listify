@@ -68,6 +68,12 @@ android {
         }
     }
 
+
+    lint {
+        abortOnError = true
+        warningsAsErrors = false
+        disable += setOf("GradleDependency", "NewerVersionAvailable")
+    }
     buildFeatures {
         viewBinding = true
         buildConfig = true
