@@ -1,21 +1,27 @@
 name: Listify CD — Deploy to Firebase
 
 on:
-  push:
+  # Trigger only after CI workflow completes successfully on main
+  workflow_run:
+    workflows: ["Listify CI"]
     branches: [ main ]
+    types: [ completed ]
+  # Also allow manual trigger with custom release notes
   workflow_dispatch:
     inputs:
       release_notes:
         description: 'Release notes for this build'
         required: false
-        default: 'Automated deployment from main branch'
+        default: 'Manual deployment from main branch'
 
 jobs:
   deploy:
     name: Build, Sign & Deploy
     runs-on: ubuntu-latest
-    # Only run if CI checks have passed
-    needs: []
+    # Only run if triggered by a successful CI run (or manual)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
 
     steps:
       - name: Checkout code
@@ -31,24 +37,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # ── Run tests first ──────────────────────────────────────────────────────
-      - name: Run Unit Tests
+      - name: Run Unit Tests (safety check)
         run: ./gradlew testDebugUnitTest
 
-      # ── Build release APK ────────────────────────────────────────────────────
       - name: Build Release APK
         run: ./gradlew assembleRelease
-        env:
-          KEYSTORE_FILE: ${{ secrets.KEYSTORE_BASE64 }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
 
-      # ── Sign APK (if keystore secret exists) ─────────────────────────────────
       - name: Decode Keystore
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/listify_listify@2024.jks
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/listify_listify@2024.jks
 
       - name: Sign APK
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
@@ -61,7 +58,6 @@ jobs:
           keyStorePassword: ${{ secrets.STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
-      # ── Upload APK artifact ──────────────────────────────────────────────────
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
@@ -69,7 +65,6 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           retention-days: 30
 
-      # ── Deploy to Firebase App Distribution ──────────────────────────────────
       - name: Deploy to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
@@ -78,20 +73,14 @@ jobs:
           groups: internal-testers
           file: app/build/outputs/apk/release/app-release.apk
           releaseNotes: |
-            ${{ github.event.inputs.release_notes || format('Build from commit {0} by {1}', github.sha, github.actor) }}
-            
+            ${{ github.event.inputs.release_notes || format('Auto-deploy from commit {0}', github.sha) }}
             Commit: ${{ github.sha }}
-            Branch: ${{ github.ref_name }}
-            Triggered by: ${{ github.actor }}
 
-      # ── Create GitHub Release tag ────────────────────────────────────────────
-      - name: Get version from build.gradle
+      - name: Get version info
         id: version
         run: |
           VERSION=$(grep 'versionName' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
-          BUILD=$(grep 'versionCode' app/build.gradle.kts | sed 's/[^0-9]//g')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "build=$BUILD" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -100,61 +89,51 @@ jobs:
           name: Listify v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})
           body: |
             ## Listify Release
-            
             **Version:** ${{ steps.version.outputs.version }}
             **Build:** ${{ github.run_number }}
             **Commit:** ${{ github.sha }}
-            
-            ### Changes
-            ${{ github.event.inputs.release_notes || 'Automated release from main branch' }}
-            
-            ### Distribution
+
             Deployed to Firebase App Distribution → internal-testers group
           files: app/build/outputs/apk/release/*.apk
           draft: false
           prerelease: false
 
-      # ── Slack notification ───────────────────────────────────────────────────
-      - name: Notify Slack on success
-        if: success()
+      - name: Notify Slack — Deploy success
+        if: success() && secrets.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
             {
-              "text": "✅ *Listify deployed successfully!*",
-              "attachments": [
-                {
-                  "color": "good",
-                  "fields": [
-                    { "title": "Version", "value": "v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})", "short": true },
-                    { "title": "Triggered by", "value": "${{ github.actor }}", "short": true },
-                    { "title": "Commit", "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>" , "short": false },
-                    { "title": "Firebase", "value": "Deployed to *internal-testers* group", "short": false }
-                  ]
-                }
-              ]
+              "text": "✅ *Listify v${{ steps.version.outputs.version }} deployed!*",
+              "attachments": [{
+                "color": "good",
+                "fields": [
+                  { "title": "Build", "value": "${{ github.run_number }}", "short": true },
+                  { "title": "Triggered by", "value": "${{ github.actor }}", "short": true },
+                  { "title": "Commit", "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>", "short": false },
+                  { "title": "Firebase", "value": "Deployed to *internal-testers*", "short": false }
+                ]
+              }]
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
 
-      - name: Notify Slack on failure
-        if: failure()
+      - name: Notify Slack — Deploy failed
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
             {
               "text": "❌ *Listify CD pipeline FAILED*",
-              "attachments": [
-                {
-                  "color": "danger",
-                  "fields": [
-                    { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
-                    { "title": "Triggered by", "value": "${{ github.actor }}", "short": true },
-                    { "title": "Logs", "value": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>", "short": false }
-                  ]
-                }
-              ]
+              "attachments": [{
+                "color": "danger",
+                "fields": [
+                  { "title": "Branch", "value": "${{ github.ref_name }}", "short": true },
+                  { "title": "Triggered by", "value": "${{ github.actor }}", "short": true },
+                  { "title": "Logs", "value": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>", "short": false }
+                ]
+              }]
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
