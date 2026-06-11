@@ -53,6 +53,18 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7
 
+      - name: Print Test Failures
+        if: failure()
+        run: |
+          find app/build/test-results -name "*.xml" -exec python3 -c "
+import sys, re
+content = open(sys.argv[1]).read()
+failures = re.findall(r'<testcase[^>]+classname="([^"]+)"[^>]+name="([^"]+)"[^>]*>.*?<(?:failure|error)[^>]*>(.*?)</(?:failure|error)>', content, re.DOTALL)
+for cls, name, err in failures:
+    print(f'FAIL: {cls}.{name}')
+    print(f'  {err.strip()[:400]}')
+" {} \;
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
