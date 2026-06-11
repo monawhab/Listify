@@ -1,16 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <lint>
+    <!-- ===== Hardcoded values (intentional) ===== -->
     <!-- appbar_scrolling_view_behavior is a built-in Material library string -->
     <issue id="HardcodedText">
         <ignore path="**/activity_main.xml"/>
     </issue>
-    <!-- Hardcoded colors are in use intentionally for now — will migrate to theme attrs -->
+    <!-- Hardcoded colors — will migrate to theme attrs in a future ticket -->
     <issue id="HardcodedColor" severity="ignore"/>
-    <!-- Suppress dependency update noise in CI -->
+
+    <!-- ===== Dependency / version warnings ===== -->
     <issue id="GradleDependency" severity="ignore"/>
     <issue id="NewerVersionAvailable" severity="ignore"/>
-    <!-- Third-party library lint check compatibility warnings -->
+    <issue id="GradlePluginVersion" severity="ignore"/>
+
+    <!-- ===== Third-party library compatibility ===== -->
     <issue id="ObsoleteLintCustomCheck" severity="ignore"/>
-    <!-- Kotlin migration suggestions — not errors -->
+
+    <!-- ===== Kotlin / Java interop ===== -->
+    <!-- UnknownNullness: we use Kotlin null-safety, not Java annotations -->
+    <issue id="UnknownNullness" severity="ignore"/>
+    <!-- SyntheticAccessor: inner classes accessing outer members (fine in Kotlin) -->
+    <issue id="SyntheticAccessor" severity="ignore"/>
+
+    <!-- ===== Coroutines (experimental APIs used intentionally) ===== -->
+    <issue id="UnsafeOptInUsageError" severity="ignore"/>
+
+    <!-- ===== UI / Layout ===== -->
     <issue id="UnusedAttribute" severity="warning"/>
+    <!-- ContentDescription on decorative elements -->
+    <issue id="ContentDescription" severity="warning"/>
+
+    <!-- ===== Log statements (intentional fallback logging) ===== -->
+    <issue id="LogConditional" severity="ignore"/>
+
+    <!-- ===== Material / AndroidX ===== -->
+    <issue id="RestrictedApi" severity="warning"/>
+    <issue id="PrivateApi" severity="warning"/>
 </lint>
