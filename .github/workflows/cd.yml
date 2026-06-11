@@ -41,8 +41,7 @@ jobs:
         run: ./gradlew testDebugUnitTest
 
       - name: Decode Keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/listify_listify@2024.jks
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > listify_listify@2024.jks
 
       - name: Build Release APK
         run: ./gradlew assembleRelease
@@ -51,17 +50,38 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
 
-      - name: Sign APK
+      - name: Locate and prepare APK
+        id: apk
         run: |
-          jarsigner -verbose             -sigalg SHA256withRSA             -digestalg SHA-256             -keystore ${{ github.workspace }}/listify_listify@2024.jks             -storepass "${{ secrets.STORE_PASSWORD }}"             -keypass "${{ secrets.KEY_PASSWORD }}"             app/build/outputs/apk/release/app-release-unsigned.apk             "${{ secrets.KEY_ALIAS }}"
-          
-          $ANDROID_HOME/build-tools/*/zipalign -v -p 4             app/build/outputs/apk/release/app-release-unsigned.apk             app/build/outputs/apk/release/app-release.apk ||           cp app/build/outputs/apk/release/app-release-unsigned.apk             app/build/outputs/apk/release/app-release.apk
+          echo "APK files in release directory:"
+          find app/build/outputs/apk/release -name "*.apk" -type f
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" -type f | head -1)
+          echo "APK_PATH=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "Using: $APK_PATH"
 
-      - name: Upload Signed APK
+      - name: Sign APK (if unsigned)
+        run: |
+          APK="${{ steps.apk.outputs.APK_PATH }}"
+          if [[ "$APK" == *"unsigned"* ]]; then
+            echo "Signing unsigned APK..."
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+              -keystore listify_listify@2024.jks \
+              -storepass "${{ secrets.STORE_PASSWORD }}" \
+              -keypass "${{ secrets.KEY_PASSWORD }}" \
+              "$APK" "${{ secrets.KEY_ALIAS }}"
+            SIGNED="${APK/unsigned/signed}"
+            zipalign -v -p 4 "$APK" "$SIGNED" 2>/dev/null || cp "$APK" "$SIGNED"
+            cp "$SIGNED" app/build/outputs/apk/release/app-final.apk
+          else
+            echo "APK already signed by Gradle."
+            cp "$APK" app/build/outputs/apk/release/app-final.apk
+          fi
+
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: listify-release-${{ github.sha }}
-          path: app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/apk/release/app-final.apk
           retention-days: 30
 
       - name: Deploy to Firebase App Distribution
@@ -70,9 +90,8 @@ jobs:
           appId: ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           groups: internal-testers
-          file: app/build/outputs/apk/release/app-release.apk
-          releaseNotes: |
-            ${{ github.event.inputs.release_notes || format('Auto-deploy from commit {0}', github.sha) }}
+          file: app/build/outputs/apk/release/app-final.apk
+          releaseNotes: ${{ github.event.inputs.release_notes || 'Auto-deploy from main' }}
 
       - name: Get version info
         id: version
@@ -86,12 +105,10 @@ jobs:
           tag_name: v${{ steps.version.outputs.version }}-${{ github.run_number }}
           name: Listify v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})
           body: |
-            ## Listify Release
-            **Version:** ${{ steps.version.outputs.version }}
-            **Build:** ${{ github.run_number }}
-            **Commit:** ${{ github.sha }}
-            Deployed to Firebase App Distribution → internal-testers
-          files: app/build/outputs/apk/release/*.apk
+            Listify v${{ steps.version.outputs.version }} — Build ${{ github.run_number }}
+            Commit ${{ github.sha }}
+            Deployed to Firebase App Distribution internal-testers group.
+          files: app/build/outputs/apk/release/app-final.apk
           draft: false
           prerelease: false
 
@@ -101,12 +118,12 @@ jobs:
         with:
           payload: |
             {
-              "text": "${{ job.status == 'success' && '✅' || '❌' }} *Listify CD — ${{ job.status }}*",
+              "text": "${{ job.status == 'success' && '✅' || '❌' }} *Listify CD — ${{ job.status }}* (Build ${{ github.run_number }})",
               "attachments": [{
                 "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
                 "fields": [
-                  { "title": "Version", "value": "v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})", "short": true },
-                  { "title": "Triggered by", "value": "${{ github.actor }}", "short": true },
+                  { "title": "Version", "value": "v${{ steps.version.outputs.version }}", "short": true },
+                  { "title": "Actor", "value": "${{ github.actor }}", "short": true },
                   { "title": "Logs", "value": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>", "short": false }
                 ]
               }]
