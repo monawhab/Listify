@@ -1,0 +1,39 @@
+# BMad Method configuration for Listify
+# Adapts the BMad agile framework to our existing Jira → GitHub → CI/CD pipeline
+
+project:
+  name: Listify
+  type: android-ecommerce
+  jira_project: LIS
+  jira_cloud_id: "99387c43-be0b-4ea8-b014-2221db44813d"
+  github_repo: WEAndroidDevTeam/Listify
+
+# Scale-adaptive tracks — auto-selected based on feature complexity
+tracks:
+  quick_flow:
+    description: "Bug fixes, small features, clear scope"
+    artifacts: [tech_spec]
+    levels: [0, 1]
+  bmad_method:
+    description: "Products, platforms, complex features"
+    artifacts: [prd, architecture, ux_spec, stories]
+    levels: [2, 3]
+  enterprise:
+    description: "Compliance, security, large scope"
+    artifacts: [prd, architecture, ux_spec, security_review, stories]
+    levels: [4]
+
+# Agents — each maps to a phase of planning
+agents:
+  analyst:    "Researches the problem, defines the brief"
+  pm:         "Writes the PRD with epics and acceptance criteria"
+  architect:  "Defines technical approach, fits our MVVM + Clean Architecture"
+  ux:         "Describes screens and user flows"
+  scrum:      "Breaks PRD into Jira-ready stories with estimates"
+  developer:  "Implements stories (our existing pipeline takes over here)"
+  test:       "Defines test strategy — unit + Maestro flows"
+
+# Pipeline handoff: after BMad generates stories, our existing automation runs
+handoff:
+  creates_jira_tickets: true
+  triggers_dev_pipeline: true

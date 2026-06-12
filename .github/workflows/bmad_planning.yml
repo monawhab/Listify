@@ -1,0 +1,59 @@
+name: BMad Feature Planning
+
+on:
+  workflow_dispatch:
+    inputs:
+      feature_brief:
+        description: 'One-line description of the feature to plan'
+        required: true
+        default: 'Add a user wishlist to save favorite products'
+      create_jira:
+        description: 'Create Jira tickets after planning?'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  plan:
+    name: BMad Planning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run BMad Planning
+        run: python3 .bmad/bmad_plan.py "${{ github.event.inputs.feature_brief }}"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Upload Planning Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: bmad-plan-${{ github.run_number }}
+          path: /tmp/bmad_plan.json
+          retention-days: 30
+
+      - name: Create Jira tickets
+        if: github.event.inputs.create_jira == 'true'
+        run: python3 .bmad/bmad_to_jira.py
+        env:
+          JIRA_API_TOKEN_B64: ${{ secrets.JIRA_API_TOKEN_B64 }}
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "📋 *BMad planned a new feature*",
+              "attachments": [{
+                "color": "good",
+                "fields": [
+                  { "title": "Feature", "value": "${{ github.event.inputs.feature_brief }}", "short": false },
+                  { "title": "Jira tickets", "value": "${{ github.event.inputs.create_jira == 'true' && 'Created' || 'Planning only' }}", "short": true }
+                ]
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
