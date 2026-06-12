@@ -91,16 +91,15 @@ jobs:
         run: echo "version=1.0.1" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ steps.version.outputs.version }}-${{ github.run_number }}
-          name: Listify v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})
-          body: |
-            Version ${{ steps.version.outputs.version }} — Build ${{ github.run_number }}
-            Commit ${{ github.sha }}
-          files: app/build/outputs/apk/release/app-final.apk
-          draft: false
-          prerelease: false
+        run: |
+          TAG="v${{ steps.version.outputs.version }}-${{ github.run_number }}"
+          curl -s -X POST             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/${{ github.repository }}/releases"             -d "{
+              \"tag_name\": \"$TAG\",
+              \"name\": \"Listify $TAG\",
+              \"body\": \"Build ${{ github.run_number }} — Commit ${{ github.sha }}\",
+              \"draft\": false,
+              \"prerelease\": false
+            }" | python3 -c "import sys,json; r=json.load(sys.stdin); print('Release:', r.get('html_url','Error:'+str(r.get('message',''))))"
 
       - name: Notify Slack
         if: always()
