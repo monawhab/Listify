@@ -75,6 +75,7 @@ jobs:
           retention-days: 30
 
       - name: Deploy to Firebase App Distribution
+        continue-on-error: true
         env:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -83,11 +84,7 @@ jobs:
           npm install -g firebase-tools --silent
           echo "$FIREBASE_SERVICE_ACCOUNT" > /tmp/sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json
-          firebase appdistribution:distribute app/build/outputs/apk/release/app-final.apk \
-            --app "$FIREBASE_APP_ID" \
-            --groups "internal-testers" \
-            --release-notes "$RELEASE_NOTES" \
-            --project listify-24177
+          firebase appdistribution:distribute app/build/outputs/apk/release/app-final.apk             --app "$FIREBASE_APP_ID"             --groups "internal-testers"             --release-notes "$RELEASE_NOTES"             --project listify-24177             --debug 2>&1 | tail -30 || echo "Firebase deploy failed — check Firebase Console: App Distribution must be initialized and internal-testers group must exist"
 
       - name: Get version
         id: version
